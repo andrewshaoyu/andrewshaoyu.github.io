@@ -21,17 +21,42 @@ spec:
     - www.example.com
     port:
       name: example-gw
-      number: 80
+      number: 8080
       protocol: HTTP
   - hosts:
     - api.example.com
     port:
       name: example-api-gw
-      number: 80
+      number: 8080
       protocol: HTTP
 ```
 
 1. VirtualService
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs-www.example.com
+  namespace: shaoyu
+spec:
+  gateways:
+  - shaoyu-test
+  hosts:
+  - www.example.com
+  http:
+  - match:
+    - ignoreUriCase: true
+      port: 8080
+      uri:
+        prefix: /
+    name: example-app
+    route:
+    - destination:
+        host: example-app-cluster
+        port:
+          number: 8080
+    timeout: 120s
+```
 
 ### envoy对象
 
