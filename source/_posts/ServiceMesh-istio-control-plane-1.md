@@ -15,7 +15,7 @@ kind: Gateway
   namespace: shaoyu
 spec:
   selector:
-    istio: ingressgateway-online-common-02
+    istio: ingressgateway
   servers:
   - hosts:
     - www.example.com
