@@ -64,10 +64,10 @@
       <div class="outer">
         <section id="main">
   
-    <article id="post-ServiceMesh-istio-control-plane-1" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-ServiceMesh-istio-control-plane-2" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2021/04/22/ServiceMesh-istio-control-plane-1/" class="article-date">
-  <time datetime="2021-04-22T03:24:35.000Z" itemprop="datePublished">2021-04-22</time>
+    <a href="/2021/04/25/ServiceMesh-istio-control-plane-2/" class="article-date">
+  <time datetime="2021-04-25T18:10:40.000Z" itemprop="datePublished">2021-04-25</time>
 </a>
     
   </div>
@@ -78,7 +78,69 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2021/04/22/ServiceMesh-istio-control-plane-1/">ServiceMesh之istio控制面一</a>
+      <a class="article-title" href="/2021/04/25/ServiceMesh-istio-control-plane-2/">ServiceMesh之istio控制面二</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="istio-envoyfilter对象"><a href="#istio-envoyfilter对象" class="headerlink" title="istio envoyfilter对象"></a>istio envoyfilter对象</h2><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1alpha3</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">EnvoyFilter</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">configPatches:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">applyTo:</span> <span class="string">HTTP_FILTER</span> <span class="string">//</span> <span class="string">HTTP_FILTER,NETWORK_FILTER</span></span><br><span class="line">      <span class="attr">match:</span> <span class="string">//</span></span><br><span class="line">        <span class="attr">context:</span> <span class="string">Gateway</span> <span class="string">//</span> <span class="string">oneof(Gateway,SidecarInBound,SIDECAR_OUTBOUND)</span></span><br><span class="line">        <span class="attr">proxyMatch:</span> <span class="string">//</span> <span class="string">match</span> <span class="string">istio</span> <span class="string">version</span></span><br><span class="line">          <span class="attr">proxyVersion:</span> <span class="string">v1.7.5</span></span><br><span class="line">        <span class="attr">routeConfiguration:</span> <span class="string">//</span> <span class="string">oneof</span> <span class="string">(routeConfiguration,listener,cluster)</span></span><br><span class="line">          <span class="attr">portNumber:</span> <span class="number">8080</span></span><br><span class="line">          <span class="attr">portName:</span> <span class="string">HTTP</span></span><br><span class="line">          <span class="attr">gateway:</span> <span class="string">shaoyu-test</span></span><br><span class="line">          <span class="attr">vhost:</span></span><br><span class="line">            <span class="attr">name:</span> <span class="string">www.example.com:8080</span></span><br><span class="line">            <span class="attr">route:</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">example-app</span></span><br><span class="line">              <span class="attr">action:</span> <span class="string">oneof(INSERT_BEFORE,ROUTE,REDIRECT,DIRECT_RESPONSE)</span></span><br><span class="line">          <span class="attr">name:</span></span><br><span class="line">      <span class="attr">patch:</span></span><br><span class="line">        <span class="attr">operation:</span> <span class="string">INSERT_BEFORE</span></span><br><span class="line">        <span class="attr">value:</span></span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>configPatch的类型</li>
+</ol>
+<h2 id="rds-envoyfilter-patch"><a href="#rds-envoyfilter-patch" class="headerlink" title="rds envoyfilter patch"></a>rds envoyfilter patch</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//遍历routeNames生成对应的routeConfig，针对每一个routeConfig patch envoyfilter</span></span><br><span class="line"><span class="keyword">for</span> _, routeName := <span class="keyword">range</span> routeNames &#123;</span><br><span class="line">  rc := configgen.buildGatewayHTTPRouteConfig(node, push, routeName)</span><br><span class="line">  <span class="keyword">if</span> rc != <span class="literal">nil</span> &#123;</span><br><span class="line">     rc = envoyfilter.ApplyRouteConfigurationPatches(networking.EnvoyFilter_GATEWAY, node, push, rc)</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    rc = &amp;route.RouteConfiguration&#123;</span><br><span class="line">           Name:             routeName,</span><br><span class="line">           VirtualHosts:     []*route.VirtualHost&#123;&#125;,</span><br><span class="line">           ValidateClusters: proto.BoolFalse,</span><br><span class="line">        &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  routeConfigurations = <span class="built_in">append</span>(routeConfigurations, rc)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>envoyfilter的patch是遍历的routeName</li>
+<li>如果一个vs既有https又有http的入口，那在patch envoyfilter的时候，一个vs下面的所有的route都会被遍历</li>
+</ol>
+<h2 id="patch是如何做的"><a href="#patch是如何做的" class="headerlink" title="patch是如何做的"></a>patch是如何做的</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">ApplyRouteConfigurationPatches</span><span class="params">(patchContext networking.EnvoyFilter_PatchContext,proxy *model.Proxy,push *model.PushContext,routeConfiguration *route.RouteConfiguration)</span> <span class="params">(out *route.RouteConfiguration)</span></span> &#123;</span><br><span class="line">	out = routeConfiguration</span><br><span class="line">	<span class="comment">// 从pushContext中，根据proxy的信息过滤所有符合条件的envoyfilter</span></span><br><span class="line">	efw := push.EnvoyFilters(proxy)</span><br><span class="line">	<span class="comment">// only merge is applicable for route configuration.</span></span><br><span class="line">	...</span><br><span class="line">	doVirtualHostListOperation(patchContext, efw.Patches, routeConfiguration)</span><br><span class="line">	<span class="keyword">return</span> routeConfiguration</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">doVirtualHostListOperation</span><span class="params">(patchContext networking.EnvoyFilter_PatchContext, patches <span class="keyword">map</span>[networking.EnvoyFilter_ApplyTo][]*model.EnvoyFilterConfigPatchWrapper, routeConfiguration *route.RouteConfiguration)</span></span> &#123;</span><br><span class="line">virtualHostsRemoved := <span class="literal">false</span></span><br><span class="line">    <span class="comment">// first do removes/merges</span></span><br><span class="line">    <span class="keyword">for</span> _, vhost := <span class="keyword">range</span> routeConfiguration.VirtualHosts &#123;</span><br><span class="line">        doVirtualHostOperation(patchContext, patches, routeConfiguration, vhost, &amp;virtualHostsRemoved)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// envoyFilter type VIRTUAL_HOST add and remove</span></span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">doVirtualHostOperation</span><span class="params">(patchContext networking.EnvoyFilter_PatchContext, patches <span class="keyword">map</span>[networking.EnvoyFilter_ApplyTo][]*model.EnvoyFilterConfigPatchWrapper, routeConfiguration *route.RouteConfiguration, virtualHost *route.VirtualHost, virtualHostRemoved *<span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line"><span class="comment">// 遍历envoyfilter，取出类型是EnvoyFilter_VIRTUAL_HOST，类型是merge</span></span><br><span class="line">    <span class="keyword">for</span> _, cp := <span class="keyword">range</span> patches[networking.EnvoyFilter_VIRTUAL_HOST] &#123;</span><br><span class="line">    <span class="keyword">if</span> commonConditionMatch(patchContext, cp) &amp;&amp; routeConfigurationMatch(patchContext, routeConfiguration, cp) &amp;&amp; virtualHostMatch(virtualHost, cp) &#123;</span><br><span class="line">    <span class="keyword">if</span> cp.Operation == networking.EnvoyFilter_Patch_REMOVE &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> cp.Operation == networking.EnvoyFilter_Patch_MERGE &#123;</span><br><span class="line">        proto.Merge(virtualHost, cp.Value)</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 针对每一条路由，执行patch</span></span><br><span class="line">    doHTTPRouteListOperation(patchContext, patches, routeConfiguration, virtualHost)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">doHTTPRouteListOperation</span><span class="params">(patchContext networking.EnvoyFilter_PatchContext,</span></span></span><br><span class="line"><span class="function"><span class="params">patches <span class="keyword">map</span>[networking.EnvoyFilter_ApplyTo][]*model.EnvoyFilterConfigPatchWrapper,</span></span></span><br><span class="line"><span class="function"><span class="params">routeConfiguration *route.RouteConfiguration, virtualHost *route.VirtualHost)</span></span> &#123;</span><br><span class="line">    routesRemoved := <span class="literal">false</span></span><br><span class="line">    <span class="comment">// 遍历每一条路由，进行patch，patches是通过proxy和routeName以及virtualHost(optional)关联出来的</span></span><br><span class="line">    <span class="keyword">for</span> index := <span class="keyword">range</span> virtualHost.Routes &#123;</span><br><span class="line">        doHTTPRouteOperation(patchContext, patches, routeConfiguration, virtualHost, index, &amp;routesRemoved)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// now for the adds and remove</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">doHTTPRouteOperation</span><span class="params">(patchContext networking.EnvoyFilter_PatchContext,</span></span></span><br><span class="line"><span class="function"><span class="params">	patches <span class="keyword">map</span>[networking.EnvoyFilter_ApplyTo][]*model.EnvoyFilterConfigPatchWrapper,</span></span></span><br><span class="line"><span class="function"><span class="params">	routeConfiguration *route.RouteConfiguration, virtualHost *route.VirtualHost, routeIndex <span class="keyword">int</span>, routesRemoved *<span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> _, cp := <span class="keyword">range</span> patches[networking.EnvoyFilter_HTTP_ROUTE] &#123;</span><br><span class="line">		<span class="comment">//将符合条件的envoyfilter patch到route上</span></span><br><span class="line">		<span class="keyword">if</span> commonConditionMatch(patchContext, cp) &amp;&amp;</span><br><span class="line">			routeConfigurationMatch(patchContext, routeConfiguration, cp) &amp;&amp;</span><br><span class="line">			virtualHostMatch(virtualHost, cp) &amp;&amp;</span><br><span class="line">			routeMatch(virtualHost.Routes[routeIndex], cp) &#123;</span><br><span class="line"></span><br><span class="line">			<span class="comment">// different virtualHosts may share same routes pointer</span></span><br><span class="line">			virtualHost.Routes = cloneVhostRoutes(virtualHost.Routes)</span><br><span class="line">			<span class="keyword">if</span> cp.Operation == networking.EnvoyFilter_Patch_REMOVE &#123;</span><br><span class="line">				virtualHost.Routes[routeIndex] = <span class="literal">nil</span></span><br><span class="line">				*routesRemoved = <span class="literal">true</span></span><br><span class="line">				<span class="keyword">return</span></span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> cp.Operation == networking.EnvoyFilter_Patch_MERGE &#123;</span><br><span class="line">				proto.Merge(virtualHost.Routes[routeIndex], cp.Value)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>envoyfilter的灵活性很强，但是使用起来还是有点痛苦的。</p>
+<p>将routes的列表和patch的列表做匹配，找到每个route需要的patch，现在有的实现上，近似于两层的循环。 在route和envoyfilter量大的情况下，patch的速度会严重影响rds build的耗时。</p>
+<p>同理针对cluster的patch，也有这样的问题</p>
+<ol>
+<li>根据使用场景，对envoyfilter做预处理，可以根据route可以通过近似O(1)的时间复杂度去get到需要patch的filter</li>
+<li>遍历全量的route也是相对比较耗时的，需要进步一步的优化</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2021/04/25/ServiceMesh-istio-control-plane-2/" data-id="cknx0i5sw0000bh0majgm0zsq" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-ServiceMesh-istio-control-plane-1" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2021/04/21/ServiceMesh-istio-control-plane-1/" class="article-date">
+  <time datetime="2021-04-21T19:24:35.000Z" itemprop="datePublished">2021-04-21</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2021/04/21/ServiceMesh-istio-control-plane-1/">ServiceMesh之istio控制面一</a>
     </h1>
   
 
@@ -126,7 +188,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2021/04/22/ServiceMesh-istio-control-plane-1/" data-id="cknsm4wxm0000mm0m2iblaq5y" class="article-share-link">Share</a>
+      <a data-url="http://example.com/2021/04/21/ServiceMesh-istio-control-plane-1/" data-id="cknsm4wxm0000mm0m2iblaq5y" class="article-share-link">Share</a>
       
       
     </footer>
@@ -167,7 +229,11 @@
       <ul>
         
           <li>
-            <a href="/2021/04/22/ServiceMesh-istio-control-plane-1/">ServiceMesh之istio控制面一</a>
+            <a href="/2021/04/25/ServiceMesh-istio-control-plane-2/">ServiceMesh之istio控制面二</a>
+          </li>
+        
+          <li>
+            <a href="/2021/04/21/ServiceMesh-istio-control-plane-1/">ServiceMesh之istio控制面一</a>
           </li>
         
       </ul>
