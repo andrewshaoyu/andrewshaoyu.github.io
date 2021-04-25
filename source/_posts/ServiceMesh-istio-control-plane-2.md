@@ -1,5 +1,7 @@
 ---
-title: ServiceMesh之istio控制面二 date: 2021-04-25 15:23:35 tags:
+title: ServiceMesh-istio-control-plane-2
+date: 2021-04-25 18:10:40
+tags:
 ---
 
 ## istio envoyfilter对象
@@ -136,7 +138,7 @@ func doHTTPRouteOperation(patchContext networking.EnvoyFilter_PatchContext,
 }
 ```
 # 总结
-envoyfilter的灵活性很强，但是使用起来还是有点痛苦的。 
+envoyfilter的灵活性很强，但是使用起来还是有点痛苦的。
 
 将routes的列表和patch的列表做匹配，找到每个route需要的patch，现在有的实现上，近似于两层的循环。 在route和envoyfilter量大的情况下，patch的速度会严重影响rds build的耗时。
 
@@ -144,4 +146,3 @@ envoyfilter的灵活性很强，但是使用起来还是有点痛苦的。
 
 1. 根据使用场景，对envoyfilter做预处理，可以根据route可以通过近似O(1)的时间复杂度去get到需要patch的filter
 1. 遍历全量的route也是相对比较耗时的，需要进步一步的优化
-
