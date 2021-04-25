@@ -64,6 +64,105 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-ServiceMesh-istio-control-plane-4" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2021/04/25/ServiceMesh-istio-control-plane-4/" class="article-date">
+  <time datetime="2021-04-25T20:36:06.000Z" itemprop="datePublished">2021-04-25</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2021/04/25/ServiceMesh-istio-control-plane-4/">ServiceMesh之istio控制面四</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="ServiceEntry和WorkloadEntry的event"><a href="#ServiceEntry和WorkloadEntry的event" class="headerlink" title="ServiceEntry和WorkloadEntry的event"></a>ServiceEntry和WorkloadEntry的event</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewServiceDiscovery</span><span class="params">(configController model.ConfigStoreCache, store model.IstioConfigStore, xdsUpdater model.XDSUpdater)</span> *<span class="title">ServiceEntryStore</span></span> &#123;</span><br><span class="line">	s := &amp;ServiceEntryStore&#123;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> configController != <span class="literal">nil</span> &#123;</span><br><span class="line">		configController.RegisterEventHandler(gvk.ServiceEntry, s.serviceEntryHandler)</span><br><span class="line">		configController.RegisterEventHandler(gvk.WorkloadEntry, s.workloadEntryHandler)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> s</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(cl *Client)</span> <span class="title">RegisterEventHandler</span><span class="params">(kind resource.GroupVersionKind, handler <span class="keyword">func</span>(model.Config, model.Config, model.Event)</span>)</span> &#123;</span><br><span class="line">	h, exists := cl.kinds[kind]</span><br><span class="line">	<span class="keyword">if</span> !exists &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	h.handlers = <span class="built_in">append</span>(h.handlers, handler)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(h *cacheHandler)</span> <span class="title">onEvent</span><span class="params">(old <span class="keyword">interface</span>&#123;&#125;, curr <span class="keyword">interface</span>&#123;&#125;, event model.Event)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">	currConfig := *TranslateObject(currItem, h.schema.Resource().GroupVersionKind(), h.client.domainSuffix)</span><br><span class="line">	<span class="keyword">for</span> _, f := <span class="keyword">range</span> h.handlers &#123;</span><br><span class="line">		f(oldConfig, currConfig, event)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">i.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs&#123;</span><br><span class="line">	AddFunc: <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">		incrementEvent(kind, <span class="string">&quot;add&quot;</span>)</span><br><span class="line">		cl.tryLedgerPut(obj, kind)</span><br><span class="line">		cl.queue.Push(<span class="function"><span class="keyword">func</span><span class="params">()</span> <span class="title">error</span></span> &#123;</span><br><span class="line">			<span class="keyword">return</span> h.onEvent(<span class="literal">nil</span>, obj, model.EventAdd)</span><br><span class="line">		&#125;)</span><br><span class="line">	&#125;,</span><br><span class="line">	...</span><br><span class="line">&#125;)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> queueImpl <span class="keyword">struct</span> &#123;</span><br><span class="line">    tasks   []Task</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(q *queueImpl)</span> <span class="title">Run</span><span class="params">(stop &lt;-<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		q.cond.L.Lock()</span><br><span class="line">        ...</span><br><span class="line">		<span class="keyword">var</span> task Task</span><br><span class="line">		task, q.tasks = q.tasks[<span class="number">0</span>], q.tasks[<span class="number">1</span>:]</span><br><span class="line">		q.cond.L.Unlock()</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err := task(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="问题点：-queue的实现有点粗糙"><a href="#问题点：-queue的实现有点粗糙" class="headerlink" title="问题点： queue的实现有点粗糙"></a>问题点： queue的实现有点粗糙</h3><ol>
+<li>queue没有去重，如果频繁的连接k8s，list到大量的资源，而处理的慢的，容易发生oom</li>
+<li>queue的执行是单线程的，处理能力相对有点弱</li>
+</ol>
+<h3 id="优化，可以参照kubebuilder的实现进行优化"><a href="#优化，可以参照kubebuilder的实现进行优化" class="headerlink" title="优化，可以参照kubebuilder的实现进行优化"></a>优化，可以参照kubebuilder的实现进行优化</h3>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2021/04/25/ServiceMesh-istio-control-plane-4/" data-id="cknx68k620001ziueb79k1ccj" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-ServiceMesh-istio-control-plane-3" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2021/04/25/ServiceMesh-istio-control-plane-3/" class="article-date">
+  <time datetime="2021-04-25T19:57:49.000Z" itemprop="datePublished">2021-04-25</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2021/04/25/ServiceMesh-istio-control-plane-3/">ServiceMesh之istio控制面三</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="envoy-Cluster和Endpoints"><a href="#envoy-Cluster和Endpoints" class="headerlink" title="envoy Cluster和Endpoints"></a>envoy Cluster和Endpoints</h2><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line"> <span class="attr">&quot;version_info&quot;</span>: <span class="string">&quot;2021-04-23T09:49:07Z/21&quot;</span>,</span><br><span class="line"> <span class="attr">&quot;cluster&quot;</span>: &#123;</span><br><span class="line">  <span class="attr">&quot;@type&quot;</span>: <span class="string">&quot;type.googleapis.com/envoy.config.cluster.v3.Cluster&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;name&quot;</span>: <span class="string">&quot;outbound_.8080_._.example-app&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;type&quot;</span>: <span class="string">&quot;EDS&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;eds_cluster_config&quot;</span>: &#123;</span><br><span class="line">   <span class="attr">&quot;eds_config&quot;</span>: &#123;</span><br><span class="line">    <span class="attr">&quot;ads&quot;</span>: &#123;&#125;,</span><br><span class="line">    <span class="attr">&quot;resource_api_version&quot;</span>: <span class="string">&quot;V3&quot;</span></span><br><span class="line">   &#125;,</span><br><span class="line">   <span class="attr">&quot;service_name&quot;</span>: <span class="string">&quot;outbound_.8080_._.example-app&quot;</span></span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">&quot;connect_timeout&quot;</span>: <span class="string">&quot;10s&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;circuit_breakers&quot;</span>: &#123;</span><br><span class="line">   <span class="attr">&quot;thresholds&quot;</span>: [</span><br><span class="line">    &#123;</span><br><span class="line">     <span class="attr">&quot;max_connections&quot;</span>: <span class="number">4294967295</span>,</span><br><span class="line">     <span class="attr">&quot;max_pending_requests&quot;</span>: <span class="number">4294967295</span>,</span><br><span class="line">     <span class="attr">&quot;max_requests&quot;</span>: <span class="number">4294967295</span>,</span><br><span class="line">     <span class="attr">&quot;max_retries&quot;</span>: <span class="number">4294967295</span></span><br><span class="line">    &#125;</span><br><span class="line">   ]</span><br><span class="line">  &#125;</span><br><span class="line"> &#125;,</span><br><span class="line"> <span class="attr">&quot;last_updated&quot;</span>: <span class="string">&quot;2021-04-23T09:49:07.419Z&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line"> <span class="attr">&quot;endpoint_config&quot;</span>: &#123;</span><br><span class="line">  <span class="attr">&quot;@type&quot;</span>: <span class="string">&quot;type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;cluster_name&quot;</span>: <span class="string">&quot;outbound_.80_._.example-app&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;endpoints&quot;</span>: [</span><br><span class="line">   &#123;</span><br><span class="line">    <span class="attr">&quot;locality&quot;</span>: &#123;&#125;,</span><br><span class="line">    <span class="attr">&quot;lb_endpoints&quot;</span>: [</span><br><span class="line">     &#123;</span><br><span class="line">      <span class="attr">&quot;endpoint&quot;</span>: &#123;</span><br><span class="line">       <span class="attr">&quot;address&quot;</span>: &#123;</span><br><span class="line">        <span class="attr">&quot;socket_address&quot;</span>: &#123;</span><br><span class="line">         <span class="attr">&quot;address&quot;</span>: <span class="string">&quot;192.168.32.2&quot;</span>,</span><br><span class="line">         <span class="attr">&quot;port_value&quot;</span>: <span class="number">8080</span></span><br><span class="line">        &#125;</span><br><span class="line">       &#125;,</span><br><span class="line">       <span class="attr">&quot;health_check_config&quot;</span>: &#123;&#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">&quot;health_status&quot;</span>: <span class="string">&quot;HEALTHY&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;load_balancing_weight&quot;</span>: <span class="number">1</span></span><br><span class="line">     &#125;</span><br><span class="line">    ]</span><br><span class="line">   &#125;</span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">&quot;policy&quot;</span>: &#123;</span><br><span class="line">   <span class="attr">&quot;overprovisioning_factor&quot;</span>: <span class="number">140</span></span><br><span class="line">  &#125;</span><br><span class="line"> &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="详细描述"><a href="#详细描述" class="headerlink" title="详细描述"></a>详细描述</h3><ol>
+<li>cluster name: <code>outbound_.80_._.example-app</code>,包含host和port</li>
+<li>lb_endpoints，该cluster里面包含哪些ip，以及对应的端口</li>
+</ol>
+<h2 id="ServiceEntry-amp-WorkloadEntry"><a href="#ServiceEntry-amp-WorkloadEntry" class="headerlink" title="ServiceEntry &amp; WorkloadEntry"></a>ServiceEntry &amp; WorkloadEntry</h2><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ServiceEntry</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">example-app</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">shaoyu-test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">exportTo:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">.</span></span><br><span class="line">  <span class="attr">hosts:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">example-app</span></span><br><span class="line">  <span class="attr">location:</span> <span class="string">MESH_EXTERNAL</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http-8080</span></span><br><span class="line">    <span class="attr">number:</span> <span class="number">8080</span></span><br><span class="line">    <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">  <span class="attr">resolution:</span> <span class="string">STATIC</span></span><br><span class="line">  <span class="attr">workloadSelector:</span></span><br><span class="line">    <span class="attr">labels:</span></span><br><span class="line">      <span class="attr">app.kubernetes.io/name:</span> <span class="string">example-app</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.istio.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">WorkloadEntry</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">example-app-1</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">shaoyu-test</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">address:</span> <span class="number">192.168</span><span class="number">.31</span><span class="number">.2</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app.kubernetes.io/name:</span> <span class="string">example-app</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="istio做了什么"><a href="#istio做了什么" class="headerlink" title="istio做了什么"></a>istio做了什么</h2><ol>
+<li>根据ServiceEntry和WorkloadEntry生成对应的cluster和endpoints</li>
+<li>ServiceEntry描述有哪些Hosts</li>
+<li>ServiceEntry的selector选择WorkloadEntry.Spec.Labels<h3 id="问题点：ServiceEntry和Cluster是一个多对多的关系"><a href="#问题点：ServiceEntry和Cluster是一个多对多的关系" class="headerlink" title="问题点：ServiceEntry和Cluster是一个多对多的关系"></a>问题点：ServiceEntry和Cluster是一个多对多的关系</h3></li>
+<li>构造Cluster和endpoints时，不可避免的需要将同一个namespace的ServiceEntry和WorkLoadEntry，进行两层循环的遍历，去生成对应的关系<code>maybeRefreshIndexes</code></li>
+<li>当一个WorkloadEntry发生变化的时候，可能会影响多个Cluster。在内存中，以hostname做为Map的key进行存储Cluster和Endpoints的数据时，多线程并发去更新时，又存在竞争的问题<h3 id="优化点"><a href="#优化点" class="headerlink" title="优化点"></a>优化点</h3>根据实际使用场景，将ServiceEntry和Cluster的关系设置成一对一，可以多线程并行的处理WorkLoadEntry</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2021/04/25/ServiceMesh-istio-control-plane-3/" data-id="cknx68k600000ziuea5sz2g3h" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-ServiceMesh-istio-control-plane-2" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2021/04/25/ServiceMesh-istio-control-plane-2/" class="article-date">
@@ -227,6 +326,14 @@
     <h3 class="widget-title">Recent Posts</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2021/04/25/ServiceMesh-istio-control-plane-4/">ServiceMesh之istio控制面四</a>
+          </li>
+        
+          <li>
+            <a href="/2021/04/25/ServiceMesh-istio-control-plane-3/">ServiceMesh之istio控制面三</a>
+          </li>
         
           <li>
             <a href="/2021/04/25/ServiceMesh-istio-control-plane-2/">ServiceMesh之istio控制面二</a>
